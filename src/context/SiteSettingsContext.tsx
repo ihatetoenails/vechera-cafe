@@ -17,7 +17,7 @@ import {
   type SiteSettings,
 } from "@/lib/site-settings";
 
-const CACHE_SITE_SETTINGS = "vechera-cache-site-settings-v1";
+const CACHE_SITE_SETTINGS = "vechera-cache-site-settings-v2";
 
 interface SiteSettingsContextValue {
   settings: SiteSettings;

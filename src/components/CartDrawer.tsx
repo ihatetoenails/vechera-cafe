@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { CleanMap } from "@/components/CleanMap";
 import { CustomDateTimePicker } from "@/components/CustomDateTimePicker";
+import { CustomSelect } from "@/components/CustomSelect";
 import {
   clearTrackedOrder,
   loadTrackedOrder,
@@ -37,6 +38,7 @@ import {
   getCartItemFrontpadArticle,
   getCartItemPrice,
 } from "@/lib/menu-volumes";
+import { quoteDelivery } from "@/lib/delivery-zones";
 
 type PromoState =
   | { kind: "none" }
@@ -93,6 +95,9 @@ export function CartDrawer() {
   const [mode, setMode] = useState<"delivery" | "pickup">("delivery");
   const [street, setStreet] = useState("");
   const [entrance, setEntrance] = useState("");
+  const [floor, setFloor] = useState("");
+  const [needLift, setNeedLift] = useState(false);
+  const [deliveryZoneId, setDeliveryZoneId] = useState("beslan");
   const [addressNote, setAddressNote] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -119,8 +124,11 @@ export function CartDrawer() {
     if (draft.phone) setPhone(draft.phone);
     if (draft.street) setStreet(draft.street);
     if (draft.entrance) setEntrance(draft.entrance);
+    if (draft.floor) setFloor(draft.floor);
     if (draft.addressNote) setAddressNote(draft.addressNote);
     if (draft.mode) setMode(draft.mode);
+    if (draft.deliveryZoneId) setDeliveryZoneId(draft.deliveryZoneId);
+    if (typeof draft.needLift === "boolean") setNeedLift(draft.needLift);
   }, []);
 
   useEffect(() => {
@@ -135,14 +143,28 @@ export function CartDrawer() {
       phone,
       street,
       entrance,
+      floor,
       addressNote,
       mode,
+      deliveryZoneId,
+      needLift,
     });
-  }, [name, phone, street, entrance, addressNote, mode]);
+  }, [name, phone, street, entrance, floor, addressNote, mode, deliveryZoneId, needLift]);
 
   useEffect(() => {
     if (isOpen) setTracked(loadTrackedOrder());
   }, [isOpen]);
+
+  useEffect(() => {
+    if (mode !== "delivery" || !street.trim()) return;
+    const quoted = quoteDelivery(settings.deliveryZones, {
+      zoneId: deliveryZoneId,
+      street,
+    });
+    if (quoted.ok && quoted.zoneId === "beslan-special" && deliveryZoneId !== "beslan-special") {
+      setDeliveryZoneId("beslan-special");
+    }
+  }, [mode, street, deliveryZoneId, settings.deliveryZones]);
 
   useEffect(() => {
     if (mode !== "delivery" || street.trim().length < 4) {
@@ -153,9 +175,13 @@ export function CartDrawer() {
 
     setGeocodeHint("Ищем адрес на карте…");
     const timer = setTimeout(() => {
+      const zoneName =
+        settings.deliveryZones.find((z) => z.id === deliveryZoneId)?.name ||
+        "Беслан";
       fetch(
         `/api/geocode?${new URLSearchParams({
           address: street.trim(),
+          locality: zoneName,
           franchiseId,
         })}`,
       )
@@ -176,7 +202,7 @@ export function CartDrawer() {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [street, mode, franchiseId]);
+  }, [street, mode, franchiseId, deliveryZoneId, settings.deliveryZones]);
 
   const discount = useMemo(() => {
     if (promo.kind === "sale") {
@@ -188,10 +214,44 @@ export function CartDrawer() {
     return 0;
   }, [promo, total]);
 
-  const payable = Math.max(
-    0,
-    total - discount + (mode === "delivery" ? settings.deliveryFee : 0),
-  );
+  const deliveryQuote = useMemo(() => {
+    if (mode !== "delivery") return null;
+    const quoted = quoteDelivery(
+      settings.deliveryZones,
+      {
+        zoneId: deliveryZoneId,
+        street,
+        floor,
+        needLift,
+        datetime:
+          wantPreorder && preorderAt
+            ? toFrontPadDatetime(preorderAt)
+            : undefined,
+      },
+      {
+        afterHoursHour: settings.afterHoursHour,
+        afterHoursSurcharge: settings.afterHoursSurcharge,
+        liftSurcharge: settings.liftSurcharge,
+      },
+    );
+    return quoted.ok ? quoted : null;
+  }, [
+    mode,
+    settings.deliveryZones,
+    settings.afterHoursHour,
+    settings.afterHoursSurcharge,
+    settings.liftSurcharge,
+    deliveryZoneId,
+    street,
+    floor,
+    needLift,
+    wantPreorder,
+    preorderAt,
+  ]);
+
+  const deliveryFee = mode === "delivery" ? deliveryQuote?.fee ?? 0 : 0;
+
+  const payable = Math.max(0, total - discount + deliveryFee);
 
   const mapMarkers = useMemo(() => {
     const cafe = {
@@ -261,6 +321,10 @@ export function CartDrawer() {
   async function submitOrder(e: FormEvent) {
     e.preventDefault();
     if (!items.length || !user) return;
+    if (mode === "delivery" && !deliveryQuote) {
+      setResult("Выберите населённый пункт для доставки");
+      return;
+    }
     setLoading(true);
     setResult(null);
 
@@ -274,8 +338,8 @@ export function CartDrawer() {
       const promoNote =
         promo.kind !== "none" ? `Промокод ${promo.code}` : undefined;
       const deliveryNote =
-        mode === "delivery" && settings.deliveryFee > 0
-          ? `Доставка ${settings.deliveryFee} ₽`
+        mode === "delivery" && deliveryQuote
+          ? `Доставка ${deliveryQuote.zoneName} — ${deliveryQuote.fee} ₽`
           : undefined;
       const commentParts = [addressNote, promoNote, deliveryNote].filter(Boolean);
 
@@ -290,9 +354,13 @@ export function CartDrawer() {
             ? {
                 street: street || undefined,
                 entrance: entrance || undefined,
+                floor: floor || undefined,
                 note: addressNote || undefined,
               }
             : { street: franchise.address },
+        deliveryZoneId: mode === "delivery" ? deliveryZoneId : undefined,
+        deliveryFee: mode === "delivery" ? deliveryFee : undefined,
+        needLift: mode === "delivery" ? needLift : undefined,
         items: items.map((i) => {
           const price = getCartItemPrice(i.menuItem, i.volumeId);
           const volume = findVolume(i.menuItem, i.volumeId);
@@ -358,6 +426,8 @@ export function CartDrawer() {
       clear();
       setStreet("");
       setEntrance("");
+      setFloor("");
+      setNeedLift(false);
       setAddressNote("");
       setDeliveryCoords(null);
       setGeocodeHint(null);
@@ -451,9 +521,29 @@ export function CartDrawer() {
             {mode === "delivery" ? (
               <>
                 <div className="rounded-2xl border border-[var(--gold)]/40 bg-[var(--gold-soft)]/35 px-4 py-3 text-sm text-ink">
-                  {settings.deliveryNote ||
-                    `Доставка по Беслану — ${settings.deliveryFee} ₽`}
+                  {deliveryQuote
+                    ? `Доставка в ${deliveryQuote.zoneName} — ${deliveryQuote.fromFee ? "от " : ""}${deliveryQuote.baseFee} ₽${
+                        deliveryQuote.lateFee
+                          ? `, после ${settings.afterHoursHour}:00 +${deliveryQuote.lateFee} ₽`
+                          : ""
+                      }${
+                        deliveryQuote.liftFee
+                          ? `, подъём +${deliveryQuote.liftFee} ₽`
+                          : ""
+                      }`
+                    : settings.deliveryNote}
                 </div>
+                <CustomSelect
+                  ariaLabel="Населённый пункт"
+                  placeholder="Населённый пункт"
+                  required={items.length > 0}
+                  value={deliveryZoneId}
+                  onChange={setDeliveryZoneId}
+                  options={settings.deliveryZones.map((z) => ({
+                    value: z.id,
+                    label: `${z.name} — ${z.fromFee ? "от " : ""}${z.fee} ₽`,
+                  }))}
+                />
                 <input
                   required={items.length > 0}
                   value={street}
@@ -461,12 +551,29 @@ export function CartDrawer() {
                   placeholder="Улица и дом"
                   className={inputClass}
                 />
-                <input
-                  value={entrance}
-                  onChange={(e) => setEntrance(e.target.value)}
-                  placeholder="Подъезд"
-                  className={inputClass}
-                />
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    value={entrance}
+                    onChange={(e) => setEntrance(e.target.value)}
+                    placeholder="Подъезд"
+                    className={inputClass}
+                  />
+                  <input
+                    value={floor}
+                    onChange={(e) => setFloor(e.target.value)}
+                    placeholder="Этаж"
+                    className={inputClass}
+                  />
+                </div>
+                <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-line bg-bg/30 px-4 py-3 text-sm text-ink">
+                  <input
+                    type="checkbox"
+                    checked={needLift}
+                    onChange={(e) => setNeedLift(e.target.checked)}
+                    className="h-4 w-4 accent-[var(--espresso)]"
+                  />
+                  Подъём на этаж (+{settings.liftSurcharge} ₽)
+                </label>
                 <input
                   value={addressNote}
                   onChange={(e) => setAddressNote(e.target.value)}
@@ -660,10 +767,24 @@ export function CartDrawer() {
                     <span>−{discount} ₽</span>
                   </div>
                 )}
-                {mode === "delivery" && settings.deliveryFee > 0 && (
+                {mode === "delivery" && deliveryFee > 0 && (
                   <div className="flex justify-between text-ink-muted">
-                    <span>Доставка</span>
-                    <span>{settings.deliveryFee} ₽</span>
+                    <span>
+                      Доставка
+                      {deliveryQuote?.lateFee || deliveryQuote?.liftFee
+                        ? ` (${[
+                            deliveryQuote.lateFee
+                              ? `ночь +${deliveryQuote.lateFee}`
+                              : "",
+                            deliveryQuote.liftFee
+                              ? `подъём +${deliveryQuote.liftFee}`
+                              : "",
+                          ]
+                            .filter(Boolean)
+                            .join(", ")})`
+                        : ""}
+                    </span>
+                    <span>{deliveryFee} ₽</span>
                   </div>
                 )}
                 <div className="flex justify-between font-semibold">

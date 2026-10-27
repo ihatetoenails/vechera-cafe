@@ -84,6 +84,10 @@ export interface OrderPayload {
     doorCode?: string;
     note?: string;
   };
+  /** Населённый пункт из прайса доставки */
+  deliveryZoneId?: string;
+  deliveryFee?: number;
+  needLift?: boolean;
   items: Array<{
     id: string;
     name: string;

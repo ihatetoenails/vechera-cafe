@@ -16,6 +16,8 @@ export function CustomSelect({
   variant = "light",
   className = "",
   menuAlign = "start",
+  placeholder,
+  required,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -25,11 +27,14 @@ export function CustomSelect({
   className?: string;
   /** Куда расширять выпадающий список относительно кнопки */
   menuAlign?: "start" | "end";
+  placeholder?: string;
+  required?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const listId = useId();
-  const selected = options.find((o) => o.value === value) ?? options[0];
+  const selected = options.find((o) => o.value === value);
+  const label = selected?.label ?? placeholder ?? options[0]?.label;
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
@@ -57,6 +62,7 @@ export function CustomSelect({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={listId}
+        aria-required={required || undefined}
         onClick={() => setOpen((v) => !v)}
         className={
           isAdmin
@@ -68,8 +74,12 @@ export function CustomSelect({
               } ${open ? "ring-2 ring-[color-mix(in_srgb,var(--orange)_35%,transparent)]" : ""}`
         }
       >
-        <span className={`min-w-0 truncate ${isAdmin ? "" : "font-medium"}`}>
-          {selected?.label}
+        <span
+          className={`min-w-0 truncate ${isAdmin ? "" : "font-medium"} ${
+            selected ? "" : "text-ink-muted"
+          }`}
+        >
+          {label}
         </span>
         <ChevronDown
           className={`h-4 w-4 shrink-0 transition-transform duration-300 ${
@@ -83,7 +93,7 @@ export function CustomSelect({
           id={listId}
           role="listbox"
           aria-label={ariaLabel}
-          className={`absolute z-50 mt-1 max-h-64 min-w-full w-max max-w-[min(18rem,calc(100vw-1.25rem))] overflow-y-auto rounded-lg border p-1 ${
+          className={`absolute z-50 mt-1 max-h-64 min-w-full w-max max-w-[min(24rem,calc(100vw-1.25rem))] overflow-y-auto rounded-lg border p-1 ${
             menuAlign === "end" ? "right-0 left-auto" : "left-0 right-auto"
           } ${
             isAdmin

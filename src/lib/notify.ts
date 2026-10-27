@@ -20,11 +20,15 @@ export async function notifyNewOrder(
     `🛒 ${title}`,
     `Точка: ${franchise.shortAddress} (${franchise.address})`,
     `Способ: ${order.fulfillment === "pickup" ? "Самовывоз" : "Доставка"}`,
+    order.deliveryFee
+      ? `Доставка: ${order.deliveryFee} ₽`
+      : null,
     `Сумма: ${order.total} ₽`,
     order.customerName ? `Имя: ${order.customerName}` : null,
     order.customerPhone ? `Телефон: ${order.customerPhone}` : null,
     order.address?.street ? `Адрес: ${order.address.street}` : null,
     order.address?.entrance ? `Подъезд: ${order.address.entrance}` : null,
+    order.address?.floor ? `Этаж: ${order.address.floor}` : null,
     order.address?.apartment ? `Кв.: ${order.address.apartment}` : null,
     order.comment ? `Комментарий: ${order.comment}` : null,
     "",

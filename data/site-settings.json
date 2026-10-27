@@ -1,4 +1,79 @@
 {
   "deliveryFee": 200,
-  "deliveryNote": "Доставка по Беслану — 200 ₽"
+  "deliveryNote": "Стоимость доставки зависит от населённого пункта. После 22:00 и за подъём — плюс 50 ₽.",
+  "afterHoursHour": 22,
+  "afterHoursSurcharge": 50,
+  "liftSurcharge": 50,
+  "deliveryZones": [
+    { "id": "beslan", "name": "г. Беслан", "fee": 200, "aliases": ["беслан"] },
+    {
+      "id": "beslan-special",
+      "name": "Беслан: Конный двор, Пенька завод, ул. Подгорная",
+      "fee": 250,
+      "aliases": ["конный двор", "конный", "пенька", "подгорная", "подгорн"]
+    },
+    {
+      "id": "n-batako",
+      "name": "с. Н. Батако",
+      "fee": 300,
+      "aliases": ["н. батако", "н батако", "новый батако", "новобатако"]
+    },
+    {
+      "id": "stary-batako",
+      "name": "Старый Батако",
+      "fee": 650,
+      "aliases": ["старый батако", "с. батако", "с батако"]
+    },
+    { "id": "zilga", "name": "с. Зильга", "fee": 300, "aliases": ["зильга"] },
+    { "id": "khumalag", "name": "с. Хумалаг", "fee": 350, "aliases": ["хумалаг"] },
+    { "id": "brut", "name": "с. Брут", "fee": 500, "aliases": ["брут"] },
+    {
+      "id": "dar-kokh",
+      "name": "с. Дар-Кох",
+      "fee": 600,
+      "aliases": ["дар-кох", "даркох", "дар кох"]
+    },
+    { "id": "kardzhin", "name": "с. Карджин", "fee": 750, "aliases": ["карджин"] },
+    { "id": "elhotovo", "name": "с. Эльхотово", "fee": 1150, "aliases": ["эльхотово"] },
+    { "id": "razdzog", "name": "с. Раздзог", "fee": 650, "aliases": ["раздзог"] },
+    { "id": "tsalyk", "name": "с. Цалык", "fee": 550, "aliases": ["цалык"] },
+    { "id": "zamankul", "name": "с. Заманкул", "fee": 700, "aliases": ["заманкул"] },
+    {
+      "id": "alkhanchurt",
+      "name": "пос. Алханчурт",
+      "fee": 350,
+      "aliases": ["алханчурт"]
+    },
+    {
+      "id": "mikhailovskoe",
+      "name": "с. Михайловское",
+      "fee": 500,
+      "aliases": ["михайловское", "михайловск"]
+    },
+    {
+      "id": "zavodskoy",
+      "name": "ПГТ Заводской",
+      "fee": 550,
+      "aliases": ["заводской", "пгт заводской"]
+    },
+    { "id": "farn", "name": "с. Фарн", "fee": 300, "aliases": ["фарн"] },
+    { "id": "kosta", "name": "с. Коста", "fee": 350, "aliases": ["коста"] },
+    { "id": "cmti", "name": "с. ЦМТИ", "fee": 450, "aliases": ["цмти"] },
+    { "id": "kirova", "name": "с. Кирова", "fee": 550, "aliases": ["кирова"] },
+    { "id": "michurino", "name": "с. Мичурино", "fee": 700, "aliases": ["мичурино"] },
+    { "id": "ardon", "name": "г. Ардон", "fee": 800, "aliases": ["ардон"] },
+    {
+      "id": "arkhonskaya",
+      "name": "ст. Архонская",
+      "fee": 500,
+      "aliases": ["архонская"]
+    },
+    {
+      "id": "vladikavkaz",
+      "name": "г. Владикавказ",
+      "fee": 650,
+      "aliases": ["владикавказ"],
+      "fromFee": true
+    }
+  ]
 }

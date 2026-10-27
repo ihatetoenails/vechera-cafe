@@ -76,6 +76,7 @@ async function geocodeNominatim(query: string): Promise<[number, number] | null>
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const address = searchParams.get("address")?.trim();
+  const locality = searchParams.get("locality")?.trim() || "Беслан";
   const franchiseId = searchParams.get("franchiseId") as FranchiseId | null;
 
   if (!address || address.length < 3) {
@@ -83,7 +84,7 @@ export async function GET(request: Request) {
   }
 
   const franchise = franchiseId ? FRANCHISES[franchiseId] : FRANCHISES.center;
-  const query = `Беслан, ${address}`;
+  const query = `${locality}, ${address}, Северная Осетия`;
   const apiKey = process.env.YANDEX_GEOCODER_API_KEY;
 
   try {

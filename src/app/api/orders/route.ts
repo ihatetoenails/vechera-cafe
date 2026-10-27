@@ -12,6 +12,8 @@ import { appendOrder, deleteOrder, readOrders } from "@/lib/orders-store";
 import { resolveOrderFranchise } from "@/lib/order-franchise";
 import { applyPendingWebhooks } from "@/lib/webhook-log";
 import type { FranchiseId, OrderPayload } from "@/lib/types";
+import { readSiteSettings } from "@/lib/content-store";
+import { quoteDelivery } from "@/lib/delivery-zones";
 
 function isFranchiseId(value: unknown): value is FranchiseId {
   return value === "center" || value === "hippodrome";
@@ -87,6 +89,43 @@ export async function POST(request: Request) {
       ...body,
       franchiseId: resolved.franchiseId,
     };
+
+    if (order.fulfillment === "delivery") {
+      const settings = await readSiteSettings();
+      const quoted = quoteDelivery(
+        settings.deliveryZones,
+        {
+          zoneId: order.deliveryZoneId,
+          street: order.address?.street,
+          floor: order.address?.floor,
+          needLift: order.needLift,
+          datetime: order.datetime,
+        },
+        {
+          afterHoursHour: settings.afterHoursHour,
+          afterHoursSurcharge: settings.afterHoursSurcharge,
+          liftSurcharge: settings.liftSurcharge,
+        },
+      );
+      if (!quoted.ok) {
+        return NextResponse.json(
+          { ok: false, message: quoted.message },
+          { status: 400 },
+        );
+      }
+      const itemsSum = order.items.reduce(
+        (sum, item) => sum + item.price * item.quantity,
+        0,
+      );
+      const discount = order.salePercent
+        ? Math.round((itemsSum * order.salePercent) / 100)
+        : order.saleAmount
+          ? Math.round(order.saleAmount)
+          : 0;
+      order.deliveryZoneId = quoted.zoneId;
+      order.deliveryFee = quoted.fee;
+      order.total = Math.max(0, itemsSum - discount + quoted.fee);
+    }
 
     const frontpad = await sendOrderToFrontPad(order);
     if (!frontpad.ok) {

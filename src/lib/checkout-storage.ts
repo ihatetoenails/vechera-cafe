@@ -5,8 +5,11 @@ export type CheckoutDraft = {
   phone?: string;
   street?: string;
   entrance?: string;
+  floor?: string;
   addressNote?: string;
   mode?: "delivery" | "pickup";
+  deliveryZoneId?: string;
+  needLift?: boolean;
 };
 
 export function loadCheckoutDraft(): CheckoutDraft {
